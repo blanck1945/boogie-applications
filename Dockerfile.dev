@@ -1,0 +1,25 @@
+# Imagen base con Node 22
+FROM node:22-alpine
+
+# Directorio de trabajo
+WORKDIR /usr/src/app
+
+# Configurar pnpm usando corepack (ya viene con Node 22)
+ENV PNPM_HOME="/usr/local/share/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+RUN corepack enable
+
+# Copiar solo archivos de dependencias
+COPY package.json pnpm-lock.yaml ./
+
+# Instalar TODAS las dependencias (incluye devDependencies para start:dev)
+RUN pnpm install --frozen-lockfile
+
+# Copiar el resto del proyecto
+COPY . .
+
+# Exponer el puerto Nest
+EXPOSE 3000
+
+# Comando de desarrollo (hot reload)
+CMD ["pnpm", "start:dev"]
