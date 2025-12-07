@@ -58,8 +58,8 @@ export class UserController {
     // 3) Setear cookie httpOnly con el token
     res.cookie('auth_token', token, {
       httpOnly: true,
-      secure: false, // en prod: true (HTTPS)
-      sameSite: 'lax',
+      secure: true, // porque Railway está en https
+      sameSite: 'none',
       path: '/',
       maxAge: 24 * 60 * 60 * 1000, // 1 día
     });
