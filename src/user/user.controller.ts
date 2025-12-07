@@ -1,45 +1,71 @@
-import { Controller, Get, Req, UnauthorizedException } from '@nestjs/common';
-import { Request } from 'express';
-import * as jwt from 'jsonwebtoken';
+import {
+  Controller,
+  Get,
+  Query,
+  Req,
+  Res,
+  UnauthorizedException,
+} from '@nestjs/common';
+import type { Request, Response } from 'express';
+import { JwtService } from '@nestjs/jwt';
 
 @Controller('user')
 export class UserController {
-  private readonly JWT_SECRET = process.env.JWT_SECRET || 'super-secret-dev';
+  constructor(private readonly jwtService: JwtService) {}
 
   @Get('me')
-  getMe(@Req() req: Request) {
-    // Leer la cookie "auth"
-    const cookie = req.cookies?.auth;
+  getMe(@Req() req: Request, @Res() res: Response) {
+    const token = req.cookies['auth_token']; // o header Authorization, lo que uses
 
-    if (!cookie) {
-      throw new UnauthorizedException('No auth cookie found');
+    if (!token) {
+      throw new UnauthorizedException('NOT PASS');
     }
 
-    let parsed: { token: string };
+    // si hay token y es válido, devolvés el usuario
+    const payload = this.jwtService.verify(token);
+    return res.json({
+      id: payload.sub,
+      username: 'admin',
+      email: 'admin@gmail.com',
+    });
+  }
 
-    try {
-      parsed = JSON.parse(cookie);
-    } catch (err) {
-      throw new UnauthorizedException('Invalid auth cookie format');
-    }
+  @Get('login')
+  handleCallback(
+    @Query('relayState') relayState: string,
+    @Query('username') username: string,
+    @Query('email') email: string,
+    @Res() res: Response,
+  ) {
+    console.log('relayState Nest:', relayState);
+    console.log('username:', username);
+    console.log('email:', email);
 
-    if (!parsed.token) {
-      throw new UnauthorizedException('Token missing in auth cookie');
-    }
+    // 1) Armar el payload del token
+    const payload = {
+      username,
+      email,
+      // podés agregar más cosas si querés
+      // role: 'admin',
+    };
 
-    try {
-      const payload = jwt.verify(parsed.token, this.JWT_SECRET) as any;
+    // 2) Crear el token
+    const token = this.jwtService.sign(payload, {
+      // opcional si ya lo definiste en JwtModule
+      expiresIn: '1d',
+    });
 
-      // Si se quiere, se responde con el payload real:
-      return {
-        id: payload.sub,
-        username: payload.username,
-        email: payload.email,
-        role: 'superadmin', // extra si querés hardcodear
-      };
-    } catch (error) {
-      console.error('JWT Error:', error);
-      throw new UnauthorizedException('Invalid or expired token');
-    }
+    // 3) Setear cookie httpOnly con el token
+    res.cookie('auth_token', token, {
+      httpOnly: true,
+      secure: false, // en prod: true (HTTPS)
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 24 * 60 * 60 * 1000, // 1 día
+    });
+
+    // 4) Redirect a relayState (o fallback si viene vacío)
+    const redirectUrl = relayState || 'http://localhost:5173/';
+    return res.redirect(redirectUrl);
   }
 }
