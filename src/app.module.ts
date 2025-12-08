@@ -8,6 +8,7 @@ import { Application } from './application/entity/application.entity';
 import { UploadcareService } from './uploadcare/uploadcare.service';
 import { UploadcareModule } from './uploadcare/uploadcare.module';
 import { ConfigModule } from '@nestjs/config';
+import { InstagramModule } from './instagram/instagram.module';
 
 @Module({
   imports: [
@@ -16,23 +17,24 @@ import { ConfigModule } from '@nestjs/config';
     }),
     TypeOrmModule.forRoot({
       type: 'postgres',
-      // host: process.env.DATABASE_HOST,
-      // port: Number(process.env.DATABASE_PORT) || 5432,
-      // username: process.env.DATABASE_USER,
-      // password: process.env.DATABASE_PASSWORD,
-      // database: process.env.DATABASE_DB,
-      url: process.env.DATABASE_URL,
+      host: process.env.DATABASE_HOST,
+      port: Number(process.env.DATABASE_PORT) || 5432,
+      username: process.env.DATABASE_USER,
+      password: process.env.DATABASE_PASSWORD,
+      database: process.env.DATABASE_DB,
+      // url: process.env.DATABASE_URL,
       autoLoadEntities: true,
-      // synchronize: true,
+      synchronize: true,
       entities: [Application],
-      ssl:
-        process.env.NODE_ENV === 'production'
-          ? { rejectUnauthorized: false }
-          : false,
+      // ssl:
+      //   process.env.NODE_ENV === 'production'
+      //     ? { rejectUnauthorized: false }
+      //     : false,
     }),
     ApplicationModule,
     UserModule,
     UploadcareModule,
+    InstagramModule,
   ],
   controllers: [AppController],
   providers: [AppService, UploadcareService],
