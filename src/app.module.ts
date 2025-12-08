@@ -25,7 +25,6 @@ import { InstagramModule } from './instagram/instagram.module';
       url: process.env.DATABASE_URL,
       autoLoadEntities: true,
       // synchronize: true,
-      entities: [Application],
       ssl:
         process.env.NODE_ENV === 'production'
           ? { rejectUnauthorized: false }
