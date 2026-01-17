@@ -19,6 +19,7 @@ export class UserService {
   async findByEmail(email: string) {
     return this.repo.findOne({
       where: { email: email.toLowerCase() },
+      select: ['id', 'email', 'name', 'lastName', 'username', 'role', 'isActive', 'createdAt', 'updatedAt'],
     });
   }
 
@@ -30,17 +31,27 @@ export class UserService {
 
     const user = this.repo.create({
       email,
-      username: dto.username.trim(),
+      password: dto.password,
+      name: dto.name?.trim(),
+      lastName: dto.lastName?.trim(),
+      username: dto.username?.trim(),
+      role: dto.role ?? 'admin',
       isActive: dto.isActive ?? true,
-      roles: dto.roles?.map((r) => r.trim()).filter(Boolean) ?? [],
     });
 
-    return this.repo.save(user);
+    const savedUser = await this.repo.save(user);
+    
+    // Retornar sin password
+    const { password, ...userWithoutPassword } = savedUser;
+    return userWithoutPassword;
   }
 
   async findAll(q?: string) {
     if (!q?.trim()) {
-      return this.repo.find({ order: { createdAt: 'DESC' } });
+      return this.repo.find({ 
+        order: { createdAt: 'DESC' },
+        select: ['id', 'email', 'name', 'lastName', 'username', 'role', 'isActive', 'createdAt', 'updatedAt'],
+      });
     }
 
     const query = q.trim();
@@ -48,30 +59,41 @@ export class UserService {
       where: [
         { email: ILike(`%${query}%`) },
         { username: ILike(`%${query}%`) },
+        { name: ILike(`%${query}%`) },
+        { lastName: ILike(`%${query}%`) },
       ],
       order: { createdAt: 'DESC' },
+      select: ['id', 'email', 'name', 'lastName', 'username', 'role', 'isActive', 'createdAt', 'updatedAt'],
     });
   }
 
-  async findOne(id: string) {
-    const user = await this.repo.findOne({ where: { id } });
+  async findOne(id: number) {
+    const user = await this.repo.findOne({ 
+      where: { id },
+      select: ['id', 'email', 'name', 'lastName', 'username', 'role', 'isActive', 'createdAt', 'updatedAt'],
+    });
     if (!user) throw new NotFoundException('User no encontrado');
     return user;
   }
 
-  async update(id: string, dto: UpdateUserDto) {
-    const user = await this.findOne(id);
+  async update(id: number, dto: UpdateUserDto) {
+    const user = await this.repo.findOne({ where: { id } });
+    if (!user) throw new NotFoundException('User no encontrado');
 
     if (dto.email) user.email = dto.email.trim().toLowerCase();
-    if (dto.username) user.username = dto.username.trim();
+    if (dto.password) user.password = dto.password;
+    if (dto.name !== undefined) user.name = dto.name?.trim() || null;
+    if (dto.lastName !== undefined) user.lastName = dto.lastName?.trim() || null;
+    if (dto.username !== undefined) user.username = dto.username?.trim() || null;
+    if (dto.role) user.role = dto.role.trim();
     if (dto.isActive !== undefined) user.isActive = dto.isActive;
-    if (dto.roles) user.roles = dto.roles.map((r) => r.trim()).filter(Boolean);
 
     return this.repo.save(user);
   }
 
-  async remove(id: string) {
-    const user = await this.findOne(id);
+  async remove(id: number) {
+    const user = await this.repo.findOne({ where: { id } });
+    if (!user) throw new NotFoundException('User no encontrado');
     await this.repo.remove(user);
     return { ok: true };
   }

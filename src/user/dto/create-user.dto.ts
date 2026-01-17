@@ -1,11 +1,10 @@
 // src/user/dto/create-user.dto.ts
 import {
-  IsArray,
   IsBoolean,
   IsEmail,
   IsOptional,
   IsString,
-  ArrayNotEmpty,
+  MinLength,
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
@@ -14,18 +13,33 @@ export class CreateUserDto {
   @IsEmail()
   email: string;
 
-  @ApiProperty({ description: 'Nombre de usuario', example: 'johndoe' })
+  @ApiProperty({ description: 'Contraseña del usuario', example: 'password123' })
   @IsString()
-  username: string;
+  @MinLength(6)
+  password: string;
+
+  @ApiProperty({ description: 'Nombre del usuario', required: false, example: 'Juan' })
+  @IsOptional()
+  @IsString()
+  name?: string;
+
+  @ApiProperty({ description: 'Apellido del usuario', required: false, example: 'Pérez' })
+  @IsOptional()
+  @IsString()
+  lastName?: string;
+
+  @ApiProperty({ description: 'Nombre de usuario', required: false, example: 'johndoe' })
+  @IsOptional()
+  @IsString()
+  username?: string;
+
+  @ApiProperty({ description: 'Rol del usuario', required: false, default: 'admin', example: 'admin' })
+  @IsOptional()
+  @IsString()
+  role?: string;
 
   @ApiProperty({ description: 'Estado activo del usuario', required: false, default: true })
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
-
-  @ApiProperty({ description: 'Roles del usuario', required: false, type: [String], example: ['user'] })
-  @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
-  roles?: string[];
 }

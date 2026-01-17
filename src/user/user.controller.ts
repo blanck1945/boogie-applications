@@ -7,6 +7,7 @@ import {
   InternalServerErrorException,
   NotFoundException,
   Param,
+  ParseIntPipe,
   Patch,
   Post,
   Query,
@@ -54,10 +55,12 @@ export class UserController {
         user: {
           type: 'object',
           properties: {
-            id: { type: 'string' },
-            username: { type: 'string' },
+            id: { type: 'number' },
+            username: { type: 'string', nullable: true },
             email: { type: 'string' },
-            roles: { type: 'array', items: { type: 'string' } },
+            name: { type: 'string', nullable: true },
+            lastName: { type: 'string', nullable: true },
+            role: { type: 'string' },
           },
         },
       },
@@ -66,7 +69,6 @@ export class UserController {
   @ApiResponse({ status: 404, description: 'Usuario no encontrado' })
   async getTestToken() {
     const email = 'admin@example.com';
-    const username = 'Salvador';
     
     const user = await this.service.findByEmail(email);
     if (!user) throw new NotFoundException('Usuario no encontrado');
@@ -74,10 +76,12 @@ export class UserController {
     // 1) payload
     const payload = {
       id: user.id,
-      sub: email,
-      username,
-      email,
-      roles: ['admin'],
+      sub: user.email,
+      username: user.username,
+      email: user.email,
+      name: user.name,
+      lastName: user.lastName,
+      role: user.role,
     };
 
     // 2) token
@@ -92,7 +96,9 @@ export class UserController {
         id: payload.id,
         username: payload.username,
         email: payload.email,
-        roles: payload.roles,
+        name: payload.name,
+        lastName: payload.lastName,
+        role: payload.role,
       },
     };
   }
@@ -106,10 +112,12 @@ export class UserController {
     schema: {
       type: 'object',
       properties: {
-        id: { type: 'string', nullable: true },
+        id: { type: 'number' },
         username: { type: 'string', nullable: true },
-        email: { type: 'string', nullable: true },
-        roles: { type: 'array', items: { type: 'string' } },
+        email: { type: 'string' },
+        name: { type: 'string', nullable: true },
+        lastName: { type: 'string', nullable: true },
+        role: { type: 'string' },
       },
     },
   })
@@ -127,11 +135,12 @@ export class UserController {
       const payload = this.jwtService.verify(token);
 
       return res.json({
-        // si no usás sub, no lo invento; devolvemos lo que está en el token
-        id: payload.sub ?? null,
+        id: payload.id ?? null,
         username: payload.username ?? null,
         email: payload.email ?? null,
-        roles: payload.roles ?? [],
+        name: payload.name ?? null,
+        lastName: payload.lastName ?? null,
+        role: payload.role ?? 'admin',
       });
     } catch {
       throw new UnauthorizedException('INVALID TOKEN');
@@ -141,7 +150,6 @@ export class UserController {
   @Get('login')
   @ApiOperation({ summary: 'Login de usuario - Genera token JWT' })
   @ApiQuery({ name: 'relayState', required: false, description: 'URL de redirección después del login' })
-  @ApiQuery({ name: 'username', required: true, description: 'Nombre de usuario' })
   @ApiQuery({ name: 'email', required: true, description: 'Email del usuario' })
   @ApiResponse({
     status: 302,
@@ -150,39 +158,37 @@ export class UserController {
   @ApiResponse({ status: 404, description: 'Usuario no encontrado' })
   async handleCallback(
     @Query('relayState') relayState: string,
-    @Query('username') username: string,
     @Query('email') email: string,
     @Res() res: Response,
   ) {
     try {
+      const user = await this.service.findByEmail(email);
+      if (!user) throw new NotFoundException('Usuario no encontrado');
 
-      // const user = await this.service.findByEmail('aspastrana990@gmail.com');
-      const user = await this.service.findByEmail('admin@example.com');
-      console.log('user', user);
-    if (!user) throw new NotFoundException();
-
-    // 1) payload
-    const payload = {
-      id: user.id,
-      sub: email, // ✅ útil como "id" lógico (o podés usar un id real si lo tenés)
-      username,
-      email,
-      roles: ['admin'], // opcional: o sacalo si no querés hardcodear
-    };
+      // 1) payload
+      const payload = {
+        id: user.id,
+        sub: user.email,
+        username: user.username,
+        email: user.email,
+        name: user.name,
+        lastName: user.lastName,
+        role: user.role,
+      };
     
-    // 2) token
-    const token = this.jwtService.sign(payload, {
-      expiresIn: '1d',
-    });
+      // 2) token
+      const token = this.jwtService.sign(payload, {
+        expiresIn: '1d',
+      });
 
-    // 3) redirect con token en query parameter
-    const redirectUrl = relayState || 'http://localhost:5173/';
-    const separator = redirectUrl.includes('?') ? '&' : '?';
-    return res.redirect(`${redirectUrl}${separator}token=${token}`);
-  } catch (error) {
-    console.error('Error en login:', error);
-    throw new InternalServerErrorException('Error en login');
-  }
+      // 3) redirect con token en query parameter
+      const redirectUrl = relayState || 'http://localhost:5173/';
+      const separator = redirectUrl.includes('?') ? '&' : '?';
+      return res.redirect(`${redirectUrl}${separator}token=${token}`);
+    } catch (error) {
+      console.error('Error en login:', error);
+      throw new InternalServerErrorException('Error en login');
+    }
   }
 
   // =========================
@@ -208,29 +214,29 @@ export class UserController {
 
   @Get(':id')
   @ApiOperation({ summary: 'Obtener un usuario por ID' })
-  @ApiParam({ name: 'id', description: 'ID del usuario' })
+  @ApiParam({ name: 'id', description: 'ID del usuario', type: Number })
   @ApiResponse({ status: 200, description: 'Usuario encontrado' })
   @ApiResponse({ status: 404, description: 'Usuario no encontrado' })
-  findOne(@Param('id') id: string) {
+  findOne(@Param('id', ParseIntPipe) id: number) {
     return this.service.findOne(id);
   }
 
   @Patch(':id')
   @ApiOperation({ summary: 'Actualizar un usuario' })
-  @ApiParam({ name: 'id', description: 'ID del usuario' })
+  @ApiParam({ name: 'id', description: 'ID del usuario', type: Number })
   @ApiBody({ type: UpdateUserDto })
   @ApiResponse({ status: 200, description: 'Usuario actualizado exitosamente' })
   @ApiResponse({ status: 404, description: 'Usuario no encontrado' })
-  update(@Param('id') id: string, @Body() dto: UpdateUserDto) {
+  update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateUserDto) {
     return this.service.update(id, dto);
   }
 
   @Delete(':id')
   @ApiOperation({ summary: 'Eliminar un usuario' })
-  @ApiParam({ name: 'id', description: 'ID del usuario' })
+  @ApiParam({ name: 'id', description: 'ID del usuario', type: Number })
   @ApiResponse({ status: 200, description: 'Usuario eliminado exitosamente' })
   @ApiResponse({ status: 404, description: 'Usuario no encontrado' })
-  remove(@Param('id') id: string) {
+  remove(@Param('id', ParseIntPipe) id: number) {
     return this.service.remove(id);
   }
 }
