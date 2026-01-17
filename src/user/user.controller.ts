@@ -4,6 +4,7 @@ import {
   Controller,
   Delete,
   Get,
+  InternalServerErrorException,
   NotFoundException,
   Param,
   Patch,
@@ -153,8 +154,11 @@ export class UserController {
     @Query('email') email: string,
     @Res() res: Response,
   ) {
-    // const user = await this.service.findByEmail('aspastrana990@gmail.com');
-    const user = await this.service.findByEmail('admin@example.com');
+    try {
+
+      // const user = await this.service.findByEmail('aspastrana990@gmail.com');
+      const user = await this.service.findByEmail('admin@example.com');
+      console.log('user', user);
     if (!user) throw new NotFoundException();
 
     // 1) payload
@@ -165,7 +169,7 @@ export class UserController {
       email,
       roles: ['admin'], // opcional: o sacalo si no querés hardcodear
     };
-
+    
     // 2) token
     const token = this.jwtService.sign(payload, {
       expiresIn: '1d',
@@ -175,6 +179,10 @@ export class UserController {
     const redirectUrl = relayState || 'http://localhost:5173/';
     const separator = redirectUrl.includes('?') ? '&' : '?';
     return res.redirect(`${redirectUrl}${separator}token=${token}`);
+  } catch (error) {
+    console.error('Error en login:', error);
+    throw new InternalServerErrorException('Error en login');
+  }
   }
 
   // =========================
