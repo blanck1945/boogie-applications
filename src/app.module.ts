@@ -27,17 +27,17 @@ import { JwtModule } from '@nestjs/jwt';
       // password: process.env.DATABASE_PASSWORD,
       // database: process.env.DATABASE_DB,
       url: process.env.DATABASE_URL,
-
-      entities: [__dirname + '/../**/*.entity{.ts,.js}'],
+      autoLoadEntities: true,
+      // entities: [__dirname + '/../**/*.entity{.ts,.js}'],
 
       // ✅ SOLO LOCAL
-      synchronize: process.env.NODE_ENV !== 'production',
+      synchronize: false,
 
       // migrations settings (ver abajo)
-      migrations: [__dirname + '/../migrations/*{.ts,.js}'],
+      // migrations: [__dirname + '/../migrations/*{.ts,.js}'],
 
       // logging opcional
-      logging: process.env.NODE_ENV !== 'production',
+      // logging: process.env.NODE_ENV !== 'production',
       ssl:
         process.env.NODE_ENV === 'production'
           ? { rejectUnauthorized: false }
