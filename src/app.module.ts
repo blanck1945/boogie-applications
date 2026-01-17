@@ -21,12 +21,12 @@ import { JwtModule } from '@nestjs/jwt';
     }),
     TypeOrmModule.forRoot({
       type: 'postgres',
-      host: process.env.DATABASE_HOST,
-      port: Number(process.env.DATABASE_PORT) || 5432,
-      username: process.env.DATABASE_USER,
-      password: process.env.DATABASE_PASSWORD,
-      database: process.env.DATABASE_DB,
-      // url: process.env.DATABASE_URL,
+      // host: process.env.DATABASE_HOST,
+      // port: Number(process.env.DATABASE_PORT) || 5432,
+      // username: process.env.DATABASE_USER,
+      // password: process.env.DATABASE_PASSWORD,
+      // database: process.env.DATABASE_DB,
+      url: process.env.DATABASE_URL,
 
       entities: [__dirname + '/../**/*.entity{.ts,.js}'],
 
