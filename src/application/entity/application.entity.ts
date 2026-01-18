@@ -4,12 +4,15 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
+  Index,
 } from 'typeorm';
+
+export type ApplicationVisibility = 'PUBLIC' | 'AUTHENTICATED' | 'PRIVATE';
 
 @Entity()
 export class Application {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryGeneratedColumn('uuid') // 👈 Esto genera automáticamente un UUID v4
+  id: string;
 
   @Column()
   appName: string;
@@ -21,7 +24,16 @@ export class Application {
   isActive: boolean;
 
   @Column()
+  @Index()
+  ownerId: string;
+
+  @Index({ unique: true })
+  @Column()
   url: string;
+
+  // ✅ lo que definimos
+  @Column({ type: 'text', default: 'PUBLIC' })
+  visibility: ApplicationVisibility;
 
   @CreateDateColumn()
   createdAt: Date;
